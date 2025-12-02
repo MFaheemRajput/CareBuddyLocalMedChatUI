@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CareBuddy – Conversation UI</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f5f5;
+    }
+
+    .app-container {
+      max-width: 900px;
+      margin: 20px auto;
+      background: #ffffff;
+      border: 1px solid #ddd;
+      padding: 16px 20px 20px;
+      box-sizing: border-box;
+    }
+
+    h1 {
+      font-size: 22px;
+      margin: 0 0 4px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 12px;
+    }
+
+    .top-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    label {
+      font-size: 13px;
+      color: #333;
+    }
+
+    select {
+      padding: 4px 6px;
+      font-size: 13px;
+    }
+
+    .status {
+      font-size: 12px;
+      color: #555;
+      margin-left: auto;
+    }
+
+    .status span {
+      font-weight: 600;
+    }
+
+    .session-id {
+      font-size: 11px;
+      color: #999;
+      margin-top: 2px;
+    }
+
+    .chat-container {
+      border: 1px solid #ddd;
+      background: #fafafa;
+      height: 320px;
+      padding: 10px;
+      overflow-y: auto;
+      box-sizing: border-box;
+      margin-bottom: 10px;
+    }
+
+    .msg-row {
+      margin-bottom: 8px;
+    }
+
+    .msg-meta {
+      font-size: 11px;
+      color: #777;
+      margin-bottom: 2px;
+    }
+
+    .msg-bubble {
+      display: inline-block;
+      padding: 6px 8px;
+      border-radius: 3px;
+      font-size: 14px;
+      line-height: 1.4;
+      border: 1px solid #ddd;
+      background: #fff;
+      max-width: 100%;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .msg-user .msg-bubble {
+      background: #e6f2ff;
+      border-color: #c7ddff;
+    }
+
+    .msg-assistant .msg-bubble {
+      background: #f7f7f7;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    textarea {
+      flex: 1;
+      resize: vertical;
+      min-height: 40px;
+      max-height: 120px;
+      font-size: 14px;
+      padding: 6px;
+      box-sizing: border-box;
+    }
+
+    button {
+      padding: 8px 12px;
+      font-size: 14px;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      background: #f0f0f0;
+    }
+
+    button:hover {
+      background: #e5e5e5;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    .bottom-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .actions-right {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .error-text {
+      color: #b00020;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+  </style>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <h1>CareBuddy Conversation UI</h1>
+    <div class="subtitle">
+      Local LLM evaluation interface – conversations are stored for later metric analysis.
+    </div>
+
+    <div class="top-bar">
+      <div>
+        <label for="model-select">Model version:</label>
+        <select id="model-select">
+          <option value="model-1">model-1 (v1)</option>
+          <option value="model-2">model-2 (v2)</option>
+          <option value="model-3">model-3 (v3)</option>
+          <option value="model-4">model-4 (v4)</option>
+        </select>
+      </div>
+
+      <div class="status">
+        Backend: <span id="status-text">idle</span>
+      </div>
+    </div>
+
+    <div class="session-id">
+      Session: <span id="session-id-text">– starting… –</span>
+    </div>
+
+    <div id="chat" class="chat-container">
+      <!-- Messages rendered here -->
+    </div>
+
+    <!-- Metrics Panel -->
+    <div id="metrics-panel" style="
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid #ddd;
+      background: #fefefe;
+      display: none;
+    ">
+      <h3 style="margin-top: 0;">Conversation Analysis</h3>
+
+      <div id="metrics-content" style="font-size: 13px; white-space: pre-line;">
+        <!-- Filled by JS -->
+      </div>
+    </div>
+
+    <!-- Charts Panel -->
+    <div id="charts-panel" style="
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid #ddd;
+      background: #ffffff;
+      display: none;
+    ">
+      <h3 style="margin-top:0;">Conversation Charts</h3>
+
+      <div style="margin-bottom: 20px;">
+        <h4>Radar Chart (Normalized Metrics)</h4>
+        <canvas id="radarChart" height="180"></canvas>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <h4>Normalized Metrics – Bar Chart</h4>
+        <canvas id="normalizedBarChart" height="180"></canvas>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <h4>Raw Metrics – Bar Chart</h4>
+        <canvas id="rawBarChart" height="180"></canvas>
+      </div>
+    </div>
+
+    <div class="input-row">
+      <textarea id="user-input" placeholder="Type your message and press Enter or click Send..."></textarea>
+      <button id="send-btn">Send</button>
+    </div>
+
+    <div class="bottom-bar">
+      <div id="error-area" class="error-text"></div>
+      <div class="actions-right">
+        <button id="new-session-btn">New session</button>
+        <button id="analyze-btn">Analyze conversation</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "http://127.0.0.1:8000/v1/chat/completions";
+
+    const chatEl = document.getElementById("chat");
+    const userInputEl = document.getElementById("user-input");
+    const sendBtn = document.getElementById("send-btn");
+    const modelSelectEl = document.getElementById("model-select");
+    const statusTextEl = document.getElementById("status-text");
+    const sessionIdTextEl = document.getElementById("session-id-text");
+    const errorAreaEl = document.getElementById("error-area");
+    const newSessionBtn = document.getElementById("new-session-btn");
+    const analyzeBtn = document.getElementById("analyze-btn");
+
+    let radarChart = null;
+    let normalizedBarChart = null;
+    let rawBarChart = null;
+
+    // Local display-only copy of messages (backend stores the real conversation)
+    let displayMessages = [];
+
+    function generateSessionId() {
+      // plain uuid is fine, matches your file example
+      return crypto.randomUUID();
+    }
+
+    function setSessionId(id) {
+      sessionStorage.setItem("carebuddy_session_id", id);
+      sessionIdTextEl.textContent = id;
+    }
+
+    function getSessionId() {
+      let sid = sessionStorage.getItem("carebuddy_session_id");
+      if (!sid) {
+        sid = generateSessionId();
+        setSessionId(sid);
+      }
+      return sid;
+    }
+
+    function clearSessionId() {
+      sessionStorage.removeItem("carebuddy_session_id");
+      sessionIdTextEl.textContent = "– not started yet –";
+    }
+
+    function addMessageToDisplay(role, content) {
+      displayMessages.push({
+        role,
+        content,
+        timestamp: new Date().toISOString(),
+      });
+      renderChat();
+    }
+
+    function renderChat() {
+      chatEl.innerHTML = "";
+      displayMessages.forEach(msg => {
+        const row = document.createElement("div");
+        row.className = "msg-row " + (msg.role === "user" ? "msg-user" : "msg-assistant");
+
+        const meta = document.createElement("div");
+        meta.className = "msg-meta";
+        meta.textContent = `${msg.role.toUpperCase()} – ${new Date(msg.timestamp).toLocaleTimeString()}`;
+
+        const bubble = document.createElement("div");
+        bubble.className = "msg-bubble";
+        bubble.textContent = msg.content;
+
+        row.appendChild(meta);
+        row.appendChild(bubble);
+        chatEl.appendChild(row);
+      });
+
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
+
+    function setLoading(isLoading) {
+      if (isLoading) {
+        statusTextEl.textContent = "sending...";
+        sendBtn.disabled = true;
+      } else {
+        statusTextEl.textContent = "idle";
+        sendBtn.disabled = false;
+      }
+    }
+
+    async function sendMessage() {
+      errorAreaEl.textContent = "";
+
+      const text = userInputEl.value.trim();
+      if (!text) return;
+
+      const model = modelSelectEl.value;
+      const sessionId = getSessionId(); // ensure session exists
+
+      // Show user message in UI
+      addMessageToDisplay("user", text);
+      userInputEl.value = "";
+
+      const payload = {
+        model: model,
+        messages: [
+          { role: "user", content: text }
+        ],
+        session_id: sessionId
+      };
+
+      setLoading(true);
+
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`HTTP ${res.status}: ${errText}`);
+        }
+
+        const data = await res.json();
+
+        // if backend echoes session_id, we keep it in sync
+        if (data.session_id) {
+          setSessionId(data.session_id);
+        }
+
+        const reply =
+          data.choices &&
+          data.choices[0] &&
+          data.choices[0].message &&
+          data.choices[0].message.content
+            ? data.choices[0].message.content
+            : "[No content in response]";
+
+        addMessageToDisplay("assistant", reply);
+      } catch (err) {
+        console.error(err);
+        errorAreaEl.textContent = "Error: " + err.message;
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function analyzeConversation() {
+      const model = modelSelectEl.value;
+      const sessionId = getSessionId();
+
+      if (!sessionId) {
+        alert("No active session. Send a message first.");
+        return;
+      }
+
+      const url = `http://127.0.0.1:8000/v1/analyze/${model}/${sessionId}`;
+
+      errorAreaEl.textContent = "";
+      setLoading(true);
+
+      try {
+        const res = await fetch(url, { method: "GET" });
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        // Show metrics + charts
+        renderMetrics(data);
+        renderCharts(data);
+      } catch (err) {
+        console.error(err);
+        errorAreaEl.textContent = "Analysis error: " + err.message;
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function renderMetrics(data) {
+      const panel = document.getElementById("metrics-panel");
+      const content = document.getElementById("metrics-content");
+
+      panel.style.display = "block";
+
+      const {
+        metrics_raw,
+        metrics_normalized,
+        final_score,
+        final_score_new,
+        quality
+      } = data;
+
+      content.innerHTML =
+        `Model: ${data.model_id}\n` +
+        `Session: ${data.session_id}\n\n` +
+        `=== RAW METRICS ===\n` +
+        `Contextual Recall: ${metrics_raw.ContextualRecall.toFixed(3)}\n` +
+        `Conversational Flow: ${metrics_raw.ConversationalFlow.toFixed(3)}\n` +
+        `Latency (ms): ${metrics_raw.Latency.toFixed(1)}\n` +
+        `Turn Balance (TCB): ${metrics_raw.TurnBalance.TCB.toFixed(3)}\n` +
+        `Utterance Length (mean): ${metrics_raw.UtteranceLength.UL_mean.toFixed(3)}\n\n` +
+
+        `=== NORMALIZED ===\n` +
+        `Contextual Recall: ${metrics_normalized.ContextualRecall.toFixed(3)}\n` +
+        `Conversational Flow: ${metrics_normalized.ConversationalFlow.toFixed(3)}\n` +
+        `Latency: ${metrics_normalized.Latency.toFixed(3)}\n` +
+        `Turn Balance: ${metrics_normalized.TurnBalance.toFixed(3)}\n` +
+        `Utterance Length: ${metrics_normalized.UtteranceLength.toFixed(3)}\n\n` +
+
+        `=== FINAL SCORE ===\n` +
+        `Score: ${final_score.toFixed(4)}\n` +
+        `final_score_new: ${final_score_new.toFixed(4)}\n` +
+        `Quality: ${quality}`;
+    }
+
+    function renderCharts(data) {
+      const chartsPanel = document.getElementById("charts-panel");
+      chartsPanel.style.display = "block";
+
+      const norm = data.metrics_normalized;
+      const raw = data.metrics_raw;
+
+      const labels = [
+        "Contextual Recall",
+        "Conversational Flow",
+        "Latency",
+        "Turn Balance",
+        "Utterance Length"
+      ];
+
+      const normalizedValues = [
+        norm.ContextualRecall,
+        norm.ConversationalFlow,
+        norm.Latency,
+        norm.TurnBalance,   // scalar from backend
+        norm.UtteranceLength
+      ];
+
+      const rawValues = [
+        raw.ContextualRecall,
+        raw.ConversationalFlow,
+        raw.Latency,
+        (raw.TurnBalance && raw.TurnBalance.TCB) ? raw.TurnBalance.TCB : 0,
+        raw.UtteranceLength.UL_mean
+      ];
+
+      // Clean up old charts if they exist
+      if (radarChart) radarChart.destroy();
+      if (normalizedBarChart) normalizedBarChart.destroy();
+      if (rawBarChart) rawBarChart.destroy();
+
+      // Radar Chart
+      const radarCtx = document.getElementById("radarChart").getContext("2d");
+      radarChart = new Chart(radarCtx, {
+        type: "radar",
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "Normalized Metrics",
+            data: normalizedValues,
+            backgroundColor: "rgba(54, 162, 235, 0.2)",
+            borderColor: "rgba(54, 162, 235, 1)",
+            borderWidth: 2
+          }]
+        },
+        options: {
+          scales: {
+            r: {
+              min: 0,
+              max: 1
+            }
+          }
+        }
+      });
+
+      // Normalized Bar Chart
+      const normalizedCtx = document.getElementById("normalizedBarChart").getContext("2d");
+      normalizedBarChart = new Chart(normalizedCtx, {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "Normalized Scores",
+            data: normalizedValues,
+            backgroundColor: "rgba(75, 192, 192, 0.5)",
+            borderColor: "rgba(75, 192, 192, 1)",
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: {
+            y: { beginAtZero: true, max: 1 }
+          }
+        }
+      });
+
+      // Raw Metrics Bar Chart
+      const rawCtx = document.getElementById("rawBarChart").getContext("2d");
+      rawBarChart = new Chart(rawCtx, {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "Raw Metric Values",
+            data: rawValues,
+            backgroundColor: "rgba(255, 159, 64, 0.5)",
+            borderColor: "rgba(255, 159, 64, 1)",
+            borderWidth: 1
+          }]
+        }
+      });
+    }
+
+    // Event listeners
+    sendBtn.addEventListener("click", sendMessage);
+
+    userInputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    newSessionBtn.addEventListener("click", () => {
+      if (displayMessages.length > 0 &&
+          !confirm("Start a new session? Current chat will remain on screen but backend will use a new session_id.")) {
+        return;
+      }
+      clearSessionId();
+      const newId = generateSessionId();
+      setSessionId(newId);
+      displayMessages = [];
+      renderChat();
+    });
+
+    analyzeBtn.addEventListener("click", analyzeConversation);
+
+    // Initialize on load
+    const sid = getSessionId();
+    sessionIdTextEl.textContent = sid;
+  </script>
+</body>
+</html>
