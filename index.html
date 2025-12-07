@@ -407,7 +407,9 @@
     let rawBarChart = null;
     let displayMessages = [];
 
-    const API_URL = "http://127.0.0.1:8000/v1/chatremote";
+    const API_URL = "http://192.168.1.234:9000/v1";
+    const CHAT = "/chatremote";
+    const ANALYSIS = "/analysis";
     const chatEl = document.getElementById("chat");
     const userInputEl = document.getElementById("user-input");
     const sendBtn = document.getElementById("send-btn");
@@ -584,7 +586,11 @@
       setLoading(true);
 
       try {
-        const res = await fetch(API_URL, {
+        
+        const url = `${API_URL}${CHAT}/`;
+
+      
+        const res = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
@@ -651,7 +657,8 @@
         return;
       }
 
-      const url = `http://127.0.0.1:8000/v1/analyze/${model}/${sessionId}`;
+
+      const url = `${API_URL}${ANALYSIS}/${model}/${sessionId}`;
 
       errorAreaEl.textContent = "";
       setLoading(true);
