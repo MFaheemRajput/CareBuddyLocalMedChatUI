@@ -128,11 +128,28 @@
       background: #f7f7f7;
     }
 
+        /* === NEW META DISPLAY CSS (A) === */
+    .msg-meta-block {
+      margin-top: 6px;
+      padding: 6px;
+      border-left: 3px solid #ddd;
+      background: #fff;
+      font-size: 11px;
+      color: #444;
+      border-radius: 3px;
+    }
+
+    .msg-meta-block div {
+      margin-bottom: 2px;
+    }
+
     .input-row {
       display: flex;
       gap: 8px;
       margin-top: 6px;
     }
+
+    
 
     textarea {
       flex: 1;
@@ -406,8 +423,11 @@
     let normalizedBarChart = null;
     let rawBarChart = null;
     let displayMessages = [];
+    
+    const llm = "TheBloke/Mistral-7B-Instruct-v0.2-AWQ"
 
-    const API_URL = "http://192.168.1.234:9000/v1";
+    const API_URL = "http://127.0.0.1:8000/v1";
+    //const API_URL = "http://192.168.1.234:9000/v1";
     const CHAT = "/chatremote";
     const ANALYSIS = "/analysis";
     const chatEl = document.getElementById("chat");
@@ -514,10 +534,11 @@
       sessionIdTextEl.textContent = "– not started yet –";
     }
 
-    function addMessageToDisplay(role, content) {
+    function addMessageToDisplay(role, content, meta = null) {
       displayMessages.push({
         role,
         content,
+        meta,                 // store optional metadata
         timestamp: new Date().toISOString(),
       });
       renderChat();
@@ -539,6 +560,28 @@
 
         row.appendChild(meta);
         row.appendChild(bubble);
+
+        /* ---------- NEW: Display metadata under assistant replies ---------- */
+    if (msg.role === "assistant" && msg.meta) {   // (C)
+      const metaBlock = document.createElement("div");
+      metaBlock.className = "msg-meta-block";
+
+      const m = msg.meta;
+
+      metaBlock.innerHTML = `
+        <div><strong>Frame:</strong> ${m.frame ?? "-"}</div>
+        <div><strong>State:</strong> ${m.state ?? "-"}</div>
+        <div><strong>Act:</strong> ${m.act ?? "-"}</div>
+        <div><strong>Relevance:</strong> ${m.relevance ?? "-"}</div>
+        <div><strong>State Confidence:</strong> ${m.state_confidence ?? "-"}</div>
+        <div><strong>Act Confidence:</strong> ${m.act_confidence ?? "-"}</div>
+        <div><strong>Safety Flags:</strong> ${m.safety_flags ?? "-"}</div>
+      `;
+
+      row.appendChild(metaBlock);
+    }
+    /* ------------------------------------------------------------------- */
+
         chatEl.appendChild(row);
       });
 
@@ -577,7 +620,7 @@
       userInputEl.value = "";
 
       const payload = {
-        model: "",
+        model: llm,
         chat_version: chat_version,
         messages: [{ role: "user", content: text }],
         session_id: sessionId
@@ -611,7 +654,9 @@
           data.choices?.[0]?.message?.content ??
           "[No content returned]";
 
-        addMessageToDisplay("assistant", reply);
+        const meta = data.meta_data ?? null;   // NEW
+
+        addMessageToDisplay("assistant", reply, meta);    // now includes metadata
       } catch (err) {
         errorAreaEl.textContent = "Error: " + err.message;
       } finally {
