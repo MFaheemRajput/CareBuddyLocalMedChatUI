@@ -362,7 +362,6 @@
           <option value="model-1">model-1 (v1)</option>
           <option value="model-2">model-2 (v2)</option>
           <option value="model-3">model-3 (v3)</option>
-          <option value="model-4">model-4 (v4)</option>
         </select>
       </div>
 
@@ -410,6 +409,7 @@
           <div class="actions-right">
             <button id="new-session-btn">New session</button>
             <button id="analyze-btn">Analyze conversation</button>
+            <button onclick="window.location.href='/analysis.html'">Open Analysis</button>
           </div>
         </div>
       </div>
@@ -426,8 +426,8 @@
     
     const llm = "TheBloke/Mistral-7B-Instruct-v0.2-AWQ"
 
-    const API_URL = "http://127.0.0.1:8000/v1";
-    //const API_URL = "http://192.168.1.234:9000/v1";
+    //const API_URL = "http://127.0.0.1:8000/v1";
+    const API_URL = "http://192.168.1.234:9000/v1";
     const CHAT = "/chatremote";
     const ANALYSIS = "/analysis";
     const chatEl = document.getElementById("chat");
@@ -567,6 +567,8 @@
       metaBlock.className = "msg-meta-block";
 
       const m = msg.meta;
+
+
 
       metaBlock.innerHTML = `
         <div><strong>Frame:</strong> ${m.frame ?? "-"}</div>
