@@ -314,7 +314,7 @@ function renderMetrics(data) {
 
 /* ===== CHARTS (SAME AS INDEX) ===== */
 function renderCharts(data) {
-  //const norm = data.metrics_normalized;
+  const norm = data.metrics_normalized;
   const raw = data.metrics_raw;
 
   const labels = [
@@ -351,11 +351,11 @@ function renderCharts(data) {
     options: { scales: { r: { min: 0, max: 1 } } }
   });
 
-  //radarChart = new Chart(document.getElementById("radarChart"), {
-  //  type: "radar",
-  //  data: { labels, datasets: [{ label: "Raw Values", data: rawValues }] },
-  //  options: { scales: { r: { min: 0, max: 1 } } }
-  //});
+  radarChart = new Chart(document.getElementById("radarChart"), {
+    type: "radar",
+    data: { labels, datasets: [{ label: "Raw Values", data: rawValues }] },
+    options: { scales: { r: { min: 0, max: 1 } } }
+  });
 
   normalizedBarChart = new Chart(document.getElementById("normalizedBarChart"), {
     type: "bar",
