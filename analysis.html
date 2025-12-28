@@ -272,10 +272,10 @@ data.sessions.forEach(s => {
         ${s.type} · ${s.model} · ${s.turns} turns · ${s.quality}
       </div>
     `;
-    //row.onclick = () => loadSessionAnalysis(s.session_id, s.model);
-    row.onclick = async () => {
-      toggleSessionSelection(row, s.session_id, s.model);
-    };
+    row.onclick = () => loadSessionAnalysis(s.session_id, s.model);
+    //row.onclick = async () => {
+     // toggleSessionSelection(row, s.session_id, s.model);
+    //};
     list.appendChild(row);
 });
 
