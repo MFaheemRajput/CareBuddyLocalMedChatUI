@@ -91,20 +91,6 @@ select { font-size: 12px; padding: 4px; }
   margin-bottom: 8px;
 }
 
-.turn {
-  margin-bottom: 8px;
-  padding: 6px;
-  border-left: 4px solid #ddd;
-  background: #fafafa;
-}
-
-.turn.user { border-left-color: #3b82f6; }
-.turn.assistant { border-left-color: #eb3f1c; }
-
-.turn-meta { font-size: 11px; color: #666; }
-.turn-text { font-size: 13px; margin-top: 4px; }
-.turn-metadata { font-size: 11px; margin-top: 4px; color: #444; }
-
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -189,11 +175,6 @@ Multi-session evaluation of CADM vs non-CADM conversational behavior
     </div>
 
     <div class="section">
-      <div class="section-title">Conversation Timeline</div>
-      <div id="detail-timeline"></div>
-    </div>
-
-    <div class="section">
       <div class="section-title">Metrics</div>
       <div id="detail-metrics" class="metrics-grid"></div>
     </div>
@@ -203,184 +184,46 @@ Multi-session evaluation of CADM vs non-CADM conversational behavior
       <canvas id="radarChart"></canvas>
       <canvas id="normalizedBarChart"></canvas>
       <canvas id="rawBarChart"></canvas>
+      <canvas id="stackedWeightedChart"></canvas>
     </div>
   </div>
-</div>
-
 </div>
 </div>
 
 <script>
+let stackedWeightedChart;
 
-const API_URL = "https://carebuddy.enochtech.com/v1";
-//const API_URL = "http://192.168.1.234:9000/v1";
-//const API_URL = "http://127.0.0.1:8000/v1";
-const ANALYSIS = "/analysis";
-const SESSIONS = "/sessions";
+function renderStackedWeightedChart(rawWeighted) {
+  const ctx = document.getElementById("stackedWeightedChart").getContext("2d");
 
-let radarChart, normalizedBarChart, rawBarChart;
+  if (stackedWeightedChart) stackedWeightedChart.destroy();
 
-/* ===== LOAD SESSION LIST ===== */
-async function loadSessions() {
-  const res = await fetch(`${API_URL}${SESSIONS}`);
-  const data = await res.json();
-
-  document.getElementById("sum-total").textContent = data.summary.total;
-  document.getElementById("sum-cadm").textContent = data.summary.cadm;
-  document.getElementById("sum-flow").textContent = data.summary.avg_flow.toFixed(2);
-  document.getElementById("sum-safety").textContent = data.summary.safety_events;
-
-  const list = document.getElementById("session-list");
-  list.innerHTML = "";
-
- // data.sessions.forEach(s => {
- //   const row = document.createElement("div");
-   // row.className = `session-row ${s.type}`;
-    //row.innerHTML = `
-    //  <div class="session-id">${s.session_id}</div>
-   //   <div class="session-date">${s.created_at}</div>
-   //   <div class="session-meta">
-   //     ${s.type} · ${s.model} · ${s.turns} turns · ${s.quality}
-   //   </div>
-   // `;
-   // row.onclick = () => loadSessionAnalysis(s.session_id, s.model);
-  //  list.appendChild(row);
- // });
-
-  // 1. Sort the data first (Descending: Newest first)
-data.sessions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-// 2. Now run the forEach to render
-data.sessions.forEach(s => {
-    const row = document.createElement("div");
-    row.className = `session-row ${s.type}`;
-    row.innerHTML = `
-      <div class="session-id">${s.session_id}</div>
-      <div class="session-date">${s.created_at}</div>
-      <div class="session-meta">
-        ${s.type} · ${s.model} · ${s.turns} turns · ${s.quality}
-      </div>
-    `;
-    row.onclick = () => loadSessionAnalysis(s.session_id, s.model);
-    list.appendChild(row);
-});
-
-}
-
-/* ===== LOAD SINGLE SESSION ANALYSIS (REUSED ENDPOINT) ===== */
-async function loadSessionAnalysis(sessionId, model) {
-  const res = await fetch(`${API_URL}${ANALYSIS}/${model}/${sessionId}`);
-  const data = await res.json();
-
-  document.getElementById("detail-empty").style.display = "none";
-  document.getElementById("detail-view").style.display = "block";
-
-  document.getElementById("detail-overview").innerHTML = `
-    <strong>Session:</strong> ${data.session_id}<br>
-    <strong>Model:</strong> ${data.model_id}<br>
-    <strong>Quality:</strong> ${data.quality}
-  `;
-
-  const final_raw_weighted = data.final_raw_weighted;
-  document.getElementById("detail-raw-values").innerHTML = `
-    <strong>ContextualRecall_R_W:</strong> ${final_raw_weighted.ContextualRecall_R_W}<br>
-    <strong>ConversationalFlow_R_W:</strong> ${final_raw_weighted.ConversationalFlow_R_W}<br>
-    <strong>Latency_R_W:</strong> ${final_raw_weighted.Latency_R_W}<br>
-    <strong>TurnBalance_R_W:</strong> ${final_raw_weighted.TurnBalance_R_W}<br>
-    <strong>UtteranceLength_R_W:</strong> ${final_raw_weighted.UtteranceLength_R_W}<br>
-  `;
-
-  renderMetrics(data);
-  renderCharts(data);
-}
-
-/* ===== METRICS (REUSED LOGIC) ===== */
-function renderMetrics(data) {
-  const grid = document.getElementById("detail-metrics");
-  grid.innerHTML = "";
-
-  const raw = data.metrics_raw;
-  const norm = data.metrics_normalized;
-  
-
-  const items = {
-
-    "CR (raw)": raw.ContextualRecall,
-    "Flow (raw)": raw.ConversationalFlow,
-    "Latency (raw)": raw.Latency,
-
-
-    "CR (norm)": norm.ContextualRecall,
-    "Flow (norm)": norm.ConversationalFlow,
-    "Latency (norm)": norm.Latency,
-    "TurnBalance (norm)":norm.TurnBalance,
-    "UtteranceLength (norm)":norm.UtteranceLength,
-
-    "Final Score": data.final_score,
-    "Final Score Raw weighted ": data.final_score_raw
-  };
-
-  Object.entries(items).forEach(([k,v]) => {
-    grid.innerHTML += `
-      <div class="metric-box">
-        <div class="metric-title">${k}</div>
-        <div class="metric-value">${v.toFixed(3)}</div>
-      </div>
-    `;
-  });
-}
-
-/* ===== CHARTS (SAME AS INDEX) ===== */
-function renderCharts(data) {
-  const norm = data.metrics_normalized;
-  const raw = data.metrics_raw;
-
-  const labels = [
-    "Contextual Recall",
-    "Conversational Flow",
-    "Latency",
-    "Turn Balance",
-    "Utterance Length"
-  ];
-
-  const normalizedValues = [
-    norm.ContextualRecall,
-    norm.ConversationalFlow,
-    norm.Latency,
-    norm.TurnBalance,
-    norm.UtteranceLength
-  ];
-
-  const rawValues = [
-    raw.ContextualRecall,
-    raw.ConversationalFlow,
-    raw.Latency,
-    raw.TurnBalance.TCB,
-    raw.UtteranceLength.UL_mean
-  ];
-
-  if (radarChart) radarChart.destroy();
-  if (normalizedBarChart) normalizedBarChart.destroy();
-  if (rawBarChart) rawBarChart.destroy();
-
-  radarChart = new Chart(document.getElementById("radarChart"), {
-    type: "radar",
-    data: { labels, datasets: [{ label: "Normalized", data: normalizedValues }] },
-    options: { scales: { r: { min: 0, max: 1 } } }
-  });
-
-  normalizedBarChart = new Chart(document.getElementById("normalizedBarChart"), {
+  stackedWeightedChart = new Chart(ctx, {
     type: "bar",
-    data: { labels, datasets: [{ label: "Normalized", data: normalizedValues }] }
-  });
-
-  rawBarChart = new Chart(document.getElementById("rawBarChart"), {
-    type: "bar",
-    data: { labels, datasets: [{ label: "Raw", data: rawValues }] }
+    data: {
+      labels: ["Weighted Score"],
+      datasets: [
+        { label: "Contextual Recall", data: [rawWeighted.ContextualRecall_R_W], backgroundColor: "#2196F3" },
+        { label: "Conversational Flow", data: [rawWeighted.ConversationalFlow_R_W], backgroundColor: "#4CAF50" },
+        { label: "Latency", data: [rawWeighted.Latency_R_W], backgroundColor: "#F44336" },
+        { label: "Turn Balance", data: [rawWeighted.TurnBalance_R_W], backgroundColor: "#FF9800" },
+        { label: "Utterance Length", data: [rawWeighted.UtteranceLength_R_W], backgroundColor: "#9C27B0" }
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { stacked: true },
+        y: {
+          stacked: true,
+          min: 0,
+          max: 1,
+          title: { display: true, text: "Weighted Score (0–1)" }
+        }
+      }
+    }
   });
 }
-
-loadSessions();
 </script>
 
 </body>
