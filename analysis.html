@@ -204,6 +204,7 @@ Multi-session evaluation of CADM vs non-CADM conversational behavior
       <canvas id="radarChart"></canvas>
       <canvas id="normalizedBarChart"></canvas>
       <canvas id="rawBarChart"></canvas>
+      <canvas id="stackedWeightedChart"></canvas>
     </div>
   </div>
 </div>
@@ -293,6 +294,8 @@ async function loadSessionAnalysis(sessionId, model) {
 
   renderMetrics(data);
   renderCharts(data);
+  renderStackedWeightedChart(data.final_raw_weighted)
+
 }
 
 /* ===== METRICS (REUSED LOGIC) ===== */
@@ -382,6 +385,39 @@ function renderCharts(data) {
 }
 
 loadSessions();
+let stackedWeightedChart;
+
+function renderStackedWeightedChart(rawWeighted) {
+  const ctx = document.getElementById("stackedWeightedChart").getContext("2d");
+
+  if (stackedWeightedChart) stackedWeightedChart.destroy();
+
+  stackedWeightedChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: ["Weighted Score"],
+      datasets: [
+        { label: "Contextual Recall", data: [rawWeighted.ContextualRecall_R_W], backgroundColor: "#2196F3" },
+        { label: "Conversational Flow", data: [rawWeighted.ConversationalFlow_R_W], backgroundColor: "#4CAF50" },
+        { label: "Latency", data: [rawWeighted.Latency_R_W], backgroundColor: "#F44336" },
+        { label: "Turn Balance", data: [rawWeighted.TurnBalance_R_W], backgroundColor: "#FF9800" },
+        { label: "Utterance Length", data: [rawWeighted.UtteranceLength_R_W], backgroundColor: "#9C27B0" }
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { stacked: true },
+        y: {
+          stacked: true,
+          min: 0,
+          max: 1,
+          title: { display: true, text: "Weighted Score (0–1)" }
+        }
+      }
+    }
+  });
+}
 </script>
 
 </body>
