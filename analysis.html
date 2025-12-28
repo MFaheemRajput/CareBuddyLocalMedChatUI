@@ -272,7 +272,11 @@ data.sessions.forEach(s => {
         ${s.type} · ${s.model} · ${s.turns} turns · ${s.quality}
       </div>
     `;
-    row.onclick = () => loadSessionAnalysis(s.session_id, s.model);
+    row.onclick = () => {
+      
+      loadSessionAnalysis(s.session_id, s.model);
+    
+    }
     //row.onclick = async () => {
      // toggleSessionSelection(row, s.session_id, s.model);
     //};
@@ -557,6 +561,22 @@ const referenceLinesPlugin = {
 
 
 function renderStackedWeightedChart(rawWeighted) {
+
+
+
+
+      try {
+          // Convert the object to a string with 2-space indentation
+          const textToCopy = JSON.stringify(rawWeighted, null, 2);
+          
+          // Use the modern Clipboard API
+          navigator.clipboard.writeText(textToCopy);
+          
+          console.log("Object copied to clipboard successfully!");
+      } catch (err) {
+          console.error("Unable to copy", err);
+      }
+  
   const ctx = document.getElementById("stackedWeightedChart").getContext("2d");
 
   if (stackedWeightedChart) stackedWeightedChart.destroy();
