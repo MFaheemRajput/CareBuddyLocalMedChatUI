@@ -185,6 +185,7 @@ Multi-session evaluation of CADM vs non-CADM conversational behavior
     <div class="section">
       <div class="section-title">Session Overview</div>
       <div id="detail-overview"></div>
+      <div id="detail-raw-values"></div>
     </div>
 
     <div class="section">
@@ -280,6 +281,15 @@ async function loadSessionAnalysis(sessionId, model) {
     <strong>Quality:</strong> ${data.quality}
   `;
 
+  const final_raw_weighted = data.final_raw_weighted;
+  document.getElementById("detail-raw-values").innerHTML = `
+    <strong>ContextualRecall_R_W:</strong> ${final_raw_weighted.ContextualRecall_R_W}<br>
+    <strong>ConversationalFlow_R_W:</strong> ${final_raw_weighted.ConversationalFlow_R_W}<br>
+    <strong>Latency_R_W:</strong> ${final_raw_weighted.Latency_R_W}<br>
+    <strong>TurnBalance_R_W:</strong> ${final_raw_weighted.TurnBalance_R_W}<br>
+    <strong>UtteranceLength_R_W:</strong> ${final_raw_weighted.UtteranceLength_R_W}<br>
+  `;
+
   renderMetrics(data);
   renderCharts(data);
 }
@@ -291,13 +301,14 @@ function renderMetrics(data) {
 
   const raw = data.metrics_raw;
   const norm = data.metrics_normalized;
-
+  
 
   const items = {
+
     "CR (raw)": raw.ContextualRecall,
     "Flow (raw)": raw.ConversationalFlow,
     "Latency (raw)": raw.Latency,
-    
+
 
     "CR (norm)": norm.ContextualRecall,
     "Flow (norm)": norm.ConversationalFlow,
