@@ -599,7 +599,10 @@ function renderStackedWeightedChart(rawWeighted) {
         legend: { position: "bottom" }
       },
       scales: {
-        x: { stacked: true },
+        x: { stacked: true,
+            categoryPercentage: 0.6,  // ⬅ reduce category width
+            barPercentage: 0.6        // ⬅ reduce bar width
+     },
         y: {
           stacked: true,
           min: 0,
