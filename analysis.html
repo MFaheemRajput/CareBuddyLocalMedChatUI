@@ -451,7 +451,7 @@ const referenceLinesPlugin = {
           ctx.font = "11px sans-serif";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillText(dataset.label, x, y);
+          ctx.fillText(dataset.label+"("+ value +")", x, y);
           ctx.restore();
         });
       });
