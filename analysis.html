@@ -297,10 +297,13 @@ function renderMetrics(data) {
     "CR (raw)": raw.ContextualRecall,
     "Flow (raw)": raw.ConversationalFlow,
     "Latency (raw)": raw.Latency,
+    
 
     "CR (norm)": norm.ContextualRecall,
     "Flow (norm)": norm.ConversationalFlow,
     "Latency (norm)": norm.Latency,
+    "TurnBalance (norm)":norm.TurnBalance,
+    "UtteranceLength (norm)":norm.UtteranceLength,
 
     "Final Score": data.final_score
   };
@@ -351,12 +354,6 @@ function renderCharts(data) {
   radarChart = new Chart(document.getElementById("radarChart"), {
     type: "radar",
     data: { labels, datasets: [{ label: "Normalized", data: normalizedValues }] },
-    options: { scales: { r: { min: 0, max: 1 } } }
-  });
-
-  radarChart = new Chart(document.getElementById("radarChart"), {
-    type: "radar",
-    data: { labels, datasets: [{ label: "Raw Values", data: rawValues }] },
     options: { scales: { r: { min: 0, max: 1 } } }
   });
 
