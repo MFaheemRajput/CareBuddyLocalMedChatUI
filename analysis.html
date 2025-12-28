@@ -387,6 +387,78 @@ function renderCharts(data) {
 loadSessions();
 let stackedWeightedChart;
 
+
+
+// 1️⃣ Reference lines plugin (Low / Medium / High)
+const referenceLinesPlugin = {
+  id: "referenceLines",
+  afterDraw(chart) {
+    const { ctx, chartArea, scales } = chart;
+    const yScale = scales.y;
+
+    const levels = [
+      { value: 0.45, label: "Low", color: "#ef4444" },
+      { value: 0.80, label: "Medium", color: "#f59e0b" },
+      { value: 1.00, label: "High", color: "#10b981" }
+    ];
+
+    ctx.save();
+    ctx.font = "12px sans-serif";
+    ctx.textAlign = "left";
+
+    levels.forEach(lvl => {
+      const y = yScale.getPixelForValue(lvl.value);
+
+      // line
+      ctx.strokeStyle = lvl.color;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(chartArea.left, y);
+      ctx.lineTo(chartArea.right, y);
+      ctx.stroke();
+
+      // label
+      ctx.fillStyle = lvl.color;
+      ctx.fillText(
+        `${lvl.label} (${lvl.value})`,
+        chartArea.left + 6,
+        y - 4
+      );
+    });
+
+    ctx.restore();
+  }
+};
+
+  // 2️⃣ Stack labels plugin (metric names inside stacks)
+  const stackLabelsPlugin = {
+    id: "stackLabels",
+    afterDatasetsDraw(chart) {
+      const { ctx } = chart;
+
+      chart.data.datasets.forEach((dataset, datasetIndex) => {
+        const meta = chart.getDatasetMeta(datasetIndex);
+
+        meta.data.forEach((bar, index) => {
+          const value = dataset.data[index];
+          if (!value || value < 0.05) return; // avoid clutter
+
+          const x = bar.x;
+          const y = bar.y + bar.height / 2;
+
+          ctx.save();
+          ctx.fillStyle = "#fff";
+          ctx.font = "11px sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(dataset.label, x, y);
+          ctx.restore();
+        });
+      });
+    }
+  };
+
+
 function renderStackedWeightedChart(rawWeighted) {
   const ctx = document.getElementById("stackedWeightedChart").getContext("2d");
 
@@ -395,29 +467,58 @@ function renderStackedWeightedChart(rawWeighted) {
   stackedWeightedChart = new Chart(ctx, {
     type: "bar",
     data: {
-      labels: ["Weighted Score"],
+      labels: ["Overall Weighted Score"],
       datasets: [
-        { label: "Contextual Recall", data: [rawWeighted.ContextualRecall_R_W], backgroundColor: "#2196F3" },
-        { label: "Conversational Flow", data: [rawWeighted.ConversationalFlow_R_W], backgroundColor: "#4CAF50" },
-        { label: "Latency", data: [rawWeighted.Latency_R_W], backgroundColor: "#F44336" },
-        { label: "Turn Balance", data: [rawWeighted.TurnBalance_R_W], backgroundColor: "#FF9800" },
-        { label: "Utterance Length", data: [rawWeighted.UtteranceLength_R_W], backgroundColor: "#9C27B0" }
+        {
+          label: "Contextual Recall",
+          data: [rawWeighted.ContextualRecall_R_W],
+          backgroundColor: "#2563eb"
+        },
+        {
+          label: "Conversational Flow",
+          data: [rawWeighted.ConversationalFlow_R_W],
+          backgroundColor: "#16a34a"
+        },
+        {
+          label: "Latency",
+          data: [rawWeighted.Latency_R_W],
+          backgroundColor: "#dc2626"
+        },
+        {
+          label: "Turn Balance",
+          data: [rawWeighted.TurnBalance_R_W],
+          backgroundColor: "#f59e0b"
+        },
+        {
+          label: "Utterance Length",
+          data: [rawWeighted.UtteranceLength_R_W],
+          backgroundColor: "#7c3aed"
+        }
       ]
     },
     options: {
       responsive: true,
+      plugins: {
+        legend: { position: "bottom" }
+      },
       scales: {
         x: { stacked: true },
         y: {
           stacked: true,
           min: 0,
           max: 1,
-          title: { display: true, text: "Weighted Score (0–1)" }
+          title: {
+            display: true,
+            text: "Weighted Score (0–1)"
+          }
         }
       }
-    }
+    },
+    plugins: [referenceLinesPlugin, stackLabelsPlugin]
   });
 }
+
+
 </script>
 
 </body>
