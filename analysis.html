@@ -316,7 +316,8 @@ function renderMetrics(data) {
     "TurnBalance (norm)":norm.TurnBalance,
     "UtteranceLength (norm)":norm.UtteranceLength,
 
-    "Final Score": data.final_score
+    "Final Score": data.final_score,
+    "Final Score Raw weighted ": data.final_score_raw
   };
 
   Object.entries(items).forEach(([k,v]) => {
