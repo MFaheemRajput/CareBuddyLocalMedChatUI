@@ -127,6 +127,12 @@ select { font-size: 12px; padding: 4px; }
   text-align: center;
   margin-top: 60px;
 }
+
+.session-row.selected {
+  background: #eef2ff;
+  border-left-color: #4f46e5;
+}
+
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -205,6 +211,8 @@ Multi-session evaluation of CADM vs non-CADM conversational behavior
       <canvas id="normalizedBarChart"></canvas>
       <canvas id="rawBarChart"></canvas>
       <canvas id="stackedWeightedChart"></canvas>
+      <canvas id="stackedComparisonChart"></canvas>
+
     </div>
   </div>
 </div>
@@ -219,6 +227,7 @@ const API_URL = "https://carebuddy.enochtech.com/v1";
 //const API_URL = "http://127.0.0.1:8000/v1";
 const ANALYSIS = "/analysis";
 const SESSIONS = "/sessions";
+let selectedSessions = new Map();
 
 let radarChart, normalizedBarChart, rawBarChart;
 
@@ -263,13 +272,43 @@ data.sessions.forEach(s => {
         ${s.type} · ${s.model} · ${s.turns} turns · ${s.quality}
       </div>
     `;
-    row.onclick = () => loadSessionAnalysis(s.session_id, s.model);
+    //row.onclick = () => loadSessionAnalysis(s.session_id, s.model);
+    row.onclick = async () => {
+      toggleSessionSelection(row, s.session_id, s.model);
+    };
     list.appendChild(row);
 });
 
 }
 
 /* ===== LOAD SINGLE SESSION ANALYSIS (REUSED ENDPOINT) ===== */
+async function toggleSessionSelection(row, sessionId, model) {
+  // Toggle UI
+  if (selectedSessions.has(sessionId)) {
+    selectedSessions.delete(sessionId);
+    row.classList.remove("selected");
+  } else {
+    if (selectedSessions.size >= 3) {
+      alert("You can compare a maximum of 3 conversations.");
+      return;
+    }
+
+    row.classList.add("selected");
+
+    // Fetch analysis once
+    const res = await fetch(`${API_URL}${ANALYSIS}/${model}/${sessionId}`);
+    const data = await res.json();
+
+    selectedSessions.set(sessionId, {
+      session_id: sessionId,
+      model,
+      final_raw_weighted: data.final_raw_weighted
+    });
+  }
+
+  renderComparisonChart();
+}
+
 async function loadSessionAnalysis(sessionId, model) {
   const res = await fetch(`${API_URL}${ANALYSIS}/${model}/${sessionId}`);
   const data = await res.json();
@@ -386,6 +425,64 @@ function renderCharts(data) {
 
 loadSessions();
 let stackedWeightedChart;
+let stackedComparisonChart = null;
+
+function renderComparisonChart() {
+  const ctx = document
+    .getElementById("stackedComparisonChart")
+    .getContext("2d");
+
+  if (stackedComparisonChart) stackedComparisonChart.destroy();
+
+  if (selectedSessions.size === 0) return;
+
+  const labels = Array.from(selectedSessions.values()).map(
+    s => s.session_id.slice(0, 8)
+  );
+
+  const metrics = [
+    { key: "ContextualRecall_R_W", label: "Contextual Recall", color: "#2563eb" },
+    { key: "ConversationalFlow_R_W", label: "Conversational Flow", color: "#16a34a" },
+    { key: "Latency_R_W", label: "Latency", color: "#dc2626" },
+    { key: "TurnBalance_R_W", label: "Turn Balance", color: "#f59e0b" },
+    { key: "UtteranceLength_R_W", label: "Utterance Length", color: "#7c3aed" }
+  ];
+
+  const datasets = metrics.map(m => ({
+    label: m.label,
+    backgroundColor: m.color,
+    data: Array.from(selectedSessions.values()).map(
+      s => s.final_raw_weighted[m.key] || 0
+    )
+  }));
+
+  stackedComparisonChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: "bottom" }
+      },
+      scales: {
+        x: { stacked: true },
+        y: {
+          stacked: true,
+          min: 0,
+          max: 1,
+          title: {
+            display: true,
+            text: "Weighted Score (0–1)"
+          }
+        }
+      }
+    },
+    plugins: [referenceLinesPlugin, stackLabelsPlugin]
+  });
+}
 
 
 
