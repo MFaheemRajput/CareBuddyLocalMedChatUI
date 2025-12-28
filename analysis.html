@@ -297,13 +297,13 @@ function renderMetrics(data) {
     "CR (raw)": raw.ContextualRecall,
     "Flow (raw)": raw.ConversationalFlow,
     "Latency (raw)": raw.Latency,
-    "Turn Balance (raw)": raw.turn_balance,
-    "Utterance Length (raw)": raw.utterance_length_stats,
+    "Turn Balance (raw)": raw.turn_balance.TCB,
+    "Utterance Length (raw)": raw.utterance_length_stats.UL_mean,
     "CR (norm)": norm.ContextualRecall,
     "Flow (norm)": norm.ConversationalFlow,
     "Latency (norm)": norm.Latency,
-    "Turn Balance (norm)": norm.turn_balance,
-    "Utterance Length (norm)": norm.utterance_length_stats,
+    "Turn Balance (norm)": norm.turn_balance.TCB,
+    "Utterance Length (norm)": norm.utterance_length_stats.UL_mean,
 
     "Final Score": data.final_score
   };
